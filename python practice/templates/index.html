@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical Query Processor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        input[type="text"] {
+            width: 80%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .results {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+            display: none;
+            animation: glow 1s forwards;
+        }
+
+        .results h2 {
+            margin-top: 0;
+            color: #333;
+        }
+
+        .results p, .results ul {
+            margin: 5px 0;
+            color: #555;
+        }
+
+        .results ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        .results ul li {
+            background-color: #e9ecef;
+            margin: 5px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+
+        @keyframes glow {
+            0% {
+                box-shadow: 0 0 5px rgba(0, 0, 255, 0.5);
+            }
+            50% {
+                box-shadow: 0 0 20px rgba(0, 0, 255, 0.5);
+            }
+            100% {
+                box-shadow: 0 0 5px rgba(0, 0, 255, 0.5);
+            }
+        }
+    
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Medical Query Processor</h1>
+        <div class="language-select">
+            <h2>Select Language</h2>
+            <div id="google_translate_element"></div>
+        </div>
+        <form method="post" action="/" id="queryForm">
+            <input type="text" name="query" placeholder="Enter your medical query" required>
+            <button type="submit">Submit</button>
+        </form>
+        
+        <div class="results" id="booleanQueryResult">
+            <h2>Generated Boolean Query</h2>
+            <p id="booleanQueryText">{{ boolean_query }}</p>
+        </div>
+        
+        {% if show_treatment_and_remedy %}
+            <div class="results" id="treatmentSolutionsResult">
+                <h2>Treatment Solutions</h2>
+                <ul id="treatmentSolutionsList">
+                    {% for solution in treatment_solutions %}
+                        <li>{{ solution }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        
+            <div class="results" id="remedySolutionsResult">
+                <h2>Remedy Solutions</h2>
+                <ul id="remedySolutionsList">
+                    {% for solution in remedy_solutions %}
+                        <li>{{ solution }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+        
+        {% if show_biological_and_prevention %}
+            <div class="results" id="biologicalNameResult">
+                <h2>Biological Name</h2>
+                <p id="biologicalNameText">{{ biological_name_result }}</p>
+            </div>
+            <div class="results" id="preventionMethodsResult">
+                <h2>Prevention Methods</h2>
+                <p id="preventionMethodsText">{{ prevention_methods_result }}</p>
+            </div>
+        {% endif %}
+        
+        {% if show_symptoms %}
+            <div class="results" id="symptomsResult">
+                <h2>Symptoms</h2>
+                <p id="symptomsText">{{ symptoms_result }}</p>
+            </div>
+        {% endif %}
+        
+        {% if show_lab_results %}
+            <div class="results" id="labResultsResult">
+                <h2>Lab Results</h2>
+                <p id="labResultsText">{{ lab_results_result }}</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <script>
+        document.getElementById('queryForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            
+            // Fetch the form action URL
+            let formAction = event.target.action;
+            
+            // Perform the form submission using fetch API
+            fetch(formAction, {
+                method: 'POST',
+                body: new FormData(event.target)
+            })
+            .then(response => response.text())
+            .then(html => {
+                // Update the page with the new HTML
+                document.open();
+                document.write(html);
+                document.close();
+
+                // Display results with glowing effect
+                const results = document.querySelectorAll('.results');
+                results.forEach(result => {
+                    result.style.display = 'block';
+                });
+            });
+        });
+    </script>
+    <script type="text/javascript">
+        function googleTranslateElementInit() {
+            new google.translate.TranslateElement({pageLanguage: 'en'}, 'google_translate_element');
+        }
+    </script>
+    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+</body>
+</html>
