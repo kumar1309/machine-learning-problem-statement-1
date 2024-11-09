@@ -1,0 +1,94 @@
+import pandas as pd
+import torch
+from transformers import BertTokenizer, BertForSequenceClassification
+from transformers import Trainer, TrainingArguments
+from sklearn.model_selection import train_test_split
+from datasets import Dataset
+from sklearn.metrics import accuracy_score
+
+# Load generated dataset
+data = pd.read_csv("generated_queries.csv")
+
+# Split data into training and validation sets
+train_texts, val_texts, train_labels, val_labels = train_test_split(
+    data["Query"].tolist(),
+    data["Intent"].tolist(),
+    test_size=0.2,
+    random_state=42
+)
+
+# Map intent labels to integers
+label_map = {label: idx for idx, label in enumerate(data["Intent"].unique())}
+train_labels = [label_map[label] for label in train_labels]
+val_labels = [label_map[label] for label in val_labels]
+
+# Load BERT tokenizer
+tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
+
+# Tokenize the data
+train_encodings = tokenizer(train_texts, truncation=True, padding=True, max_length=128)
+val_encodings = tokenizer(val_texts, truncation=True, padding=True, max_length=128)
+
+# Convert encodings to dataset objects
+train_dataset = Dataset.from_dict({
+    'input_ids': train_encodings['input_ids'],
+    'attention_mask': train_encodings['attention_mask'],
+    'labels': train_labels
+})
+val_dataset = Dataset.from_dict({
+    'input_ids': val_encodings['input_ids'],
+    'attention_mask': val_encodings['attention_mask'],
+    'labels': val_labels
+})
+
+# Load BERT model
+model = BertForSequenceClassification.from_pretrained("bert-base-uncased", num_labels=len(label_map))
+
+# Define training arguments with fine-tuning parameters
+training_args = TrainingArguments(
+    output_dir='./results',
+    evaluation_strategy="epoch",  # Evaluate at the end of each epoch
+    save_strategy="epoch",  # Save at the end of each epoch to match evaluation strategy
+    learning_rate=2e-5,
+    per_device_train_batch_size=8,
+    per_device_eval_batch_size=8,
+    num_train_epochs=5,
+    weight_decay=0.01,
+    logging_dir='./logs',  # Folder for logs
+    logging_steps=10,  # Log every 10 steps
+    save_steps=500,  # Save model checkpoints every 500 steps (optional)
+)
+
+def compute_metrics(eval_pred):
+    logits, labels = eval_pred
+    # Ensure logits are torch tensors for argmax
+    logits = torch.tensor(logits) if not isinstance(logits, torch.Tensor) else logits
+    labels = torch.tensor(labels) if not isinstance(labels, torch.Tensor) else labels
+
+    # Get predicted class by applying argmax
+    predictions = torch.argmax(logits, dim=1)
+    
+    # Ensure both predictions and labels are on CPU for accuracy computation
+    predictions = predictions.cpu().numpy()
+    labels = labels.cpu().numpy()
+    
+    accuracy = accuracy_score(labels, predictions)
+    return {"accuracy": accuracy}
+
+# Initialize Trainer with metrics
+trainer = Trainer(
+    model=model,
+    args=training_args,
+    train_dataset=train_dataset,
+    eval_dataset=val_dataset,
+    compute_metrics=compute_metrics
+)
+
+# Train and save the model
+trainer.train()
+
+# Save the model and tokenizer
+model.save_pretrained("./model")
+tokenizer.save_pretrained("./model")
+
+print("Model and tokenizer saved successfully to ./model")
